@@ -40,13 +40,21 @@ SCAN <- pblapply(as.list(2:length(tmz)), function(xx){
   OPEN = subset(data, data$openAt == thisBAR)
   # send market orders in Fractional Shares
   if(nrow(OPEN) > 0){sendOrdersMKT(toOpen = OPEN, maxAlloc = 50)}
-  # check if any Closing Cases
-  CLOSE = subset(data, data$closeAt == thisBAR)
+  # read in tradeLog -> this keeps a record of the trades sent to RH
+  CLOSE = readRDS("tradeLog.rds")
+  # check if we need to close out any positions
+  CLOSE = subset(CLOSE, CLOSE$closeAt == thisBAR)
   # close positions
   if(nrow(CLOSE) > 0){closePOS(bar2Cl = CLOSE)}
   # Print OPENED POSITIONS
-  if(nrow(OPEN) > 0){print(OPEN);cat("\n")}
-  
+  if(nrow(OPEN) > 0){
+    # print latest trades
+    print(OPEN);cat("\n")
+    # row bind tradeLog (CLOSE) with new orders sent
+    tradeLog <- rbind(readRDS("tradeLog.rds"),OPEN)
+    # save trades as an RDS file
+    saveRDS(tradeLog,"tradeLog.rds")
+  }
+  # Put the script to sleep until the next bar
   SLEEEP(xx)
 })
-
